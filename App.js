@@ -2,42 +2,59 @@ Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     launch: function() {
-      this.milestoneCombobox = this.add({
-           xtype: 'rallymilestonecombobox',
-           listeners: {
-               ready: this._onMilestoneComboboxLoad,
-               select: this._onMilestoneComboboxChanged,
-               scope: this
-           }
-       });
+      this.add({
+          xtype: 'rallymilestonecombobox',
+          itemId: 'milestoneComboBox',
+          fieldLabel: 'Filter by MileStone:',
+          model: 'Defect',
+          field: 'Milestones',
+          listeners: {
+              select: this._onSelect,
+              ready: this._onLoad,
+              scope: this
+          }
+      });
     },
-   _onMilestoneComboboxLoad: function() {
-      var rallyGridConfig = {
-      xtype: 'rallygrid',
-      context: this.getContext(),
-      columnCfgs: [
-        'FormattedID',
-        'Name',
-        'State',
-        'Priority',
-        'Severity',
-        'Milestone'
-      ],
-      types: ['Defect'],
-      attribute: 'MileStone',
-      storeConfig: {
-          filters: [this.milestoneCombobox.getQueryFromSelected()]
+    _onLoad: function() {
+      console.log(this._getMilestoneFilter());
+          this.add({
+              xtype: 'rallygrid',
+              columnCfgs: [
+                  'FormattedID',
+                  'Name',
+                  'Description',
+                  'AffectsDoc'
+              ],
+              context: this.getContext(),
+              storeConfig: {
+                  model: 'defect',
+                  filters: [
+                    this._getMilestoneFilter(),
+                  ]
+              }
+          });
+      },
+
+      _getMilestoneFilter: function() {
+          return [{
+              property: 'Milestones',
+              operator: '=',
+              value: this.down('#milestoneComboBox').getValue()
+          },
+          {
+            property: 'AffectsDoc',
+            operator: '=',
+            value: 'true'
+          }]
+          ;
+      },
+
+      _onSelect: function() {
+          var grid = this.down('rallygrid'),
+              store = grid.getStore();
+
+          store.clearFilter(true);
+          store.filter(this._getMilestoneFilter());
       }
-    };
-    this.rallyGrid = this.add(rallyGridConfig);
-  },
-  _onMilestoneComboboxChanged: function() {
-    var config = {
-      storeConfig: {
-          filters: [this.milestoneCombobox.getQueryFromSelected()]
-        }
-      };
-    this.rallyGrid.refresh(config);
-  }
     //  AFFECTS DOCUMENTATION
 });
