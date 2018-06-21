@@ -7,14 +7,79 @@
 
     <script type="text/javascript">
         Rally.onReady(function () {
-                Ext.define('CustomApp', {
+                // defines a class named CustomApp that extends the App SDK base class (Rally.app.App) and creates a stub launch method
+Ext.define('CustomApp', {
+   // extend app from Rally.app.App
     extend: 'Rally.app.App',
     componentCls: 'app',
+    // A stub is a small program routine that substitutes for a longer program, possibly to be loaded later or that is located remotely.
     launch: function() {
-        //Write app code here
+      //
+      this.add({
+          xtype: 'rallymilestonecombobox',
+          //
+          itemId: 'milestoneComboBox',
+          //
+          fieldLabel: 'Filter by MileStone:',
+          model: 'Defect',
+          //
+          field: 'Milestones',
+          listeners: {
+              //
+              select: this._onSelect,
+              //
+              ready: this._onLoad,
+              //
+              scope: this
+          }
+      });
+    },
+    _onLoad: function() {
+          this.add({
+              xtype: 'rallygrid',
+              columnCfgs: [
+                  'FormattedID',
+                  'Name',
+                  'Description',
+                  'AffectsDoc'
+              ],
+              //
+              context: this.getContext(),
+              //
+              storeConfig: {
+                  model: 'defect',
+                  filters: [
+                    this._getMilestoneFilter(),
+                  ]
+              }
+          });
+      },
 
-        //API Docs: https://help.rallydev.com/apps/2.1/doc/
-    }
+      _getMilestoneFilter: function() {
+          return [
+            {
+              property: 'Milestones',
+              operator: '=',
+              value: this.down('#milestoneComboBox').getValue()
+          },
+          {
+            property: 'AffectsDoc',
+            operator: '=',
+            value: 'true'
+          }
+        ];
+      },
+
+      _onSelect: function() {
+        //
+          var grid = this.down('rallygrid'),
+        //
+          store = grid.getStore();
+        //
+          store.clearFilter(true);
+          store.filter(this._getMilestoneFilter());
+      }
+    //  AFFECTS DOCUMENTATION
 });
 
 

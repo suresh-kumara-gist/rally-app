@@ -7,7 +7,7 @@
 
     <script type="text/javascript">
         Rally.onReady(function () {
-                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",launch:function(){}});
+                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",launch:function(){this.add({xtype:"rallymilestonecombobox",itemId:"milestoneComboBox",fieldLabel:"Filter by MileStone:",model:"Defect",field:"Milestones",listeners:{select:this._onSelect,ready:this._onLoad,scope:this}})},_onLoad:function(){this.add({xtype:"rallygrid",columnCfgs:["FormattedID","Name","Description","AffectsDoc"],context:this.getContext(),storeConfig:{model:"defect",filters:[this._getMilestoneFilter()]}})},_getMilestoneFilter:function(){return[{property:"Milestones",operator:"=",value:this.down("#milestoneComboBox").getValue()},{property:"AffectsDoc",operator:"=",value:"true"}]},_onSelect:function(){var e=this.down("rallygrid").getStore();e.clearFilter(!0),e.filter(this._getMilestoneFilter())}});
 
             Rally.launchApp('CustomApp', {
                 name:"ReleaseNotes",
