@@ -1,77 +1,163 @@
-// defines a class named CustomApp that extends the App SDK base class (Rally.app.App) and creates a stub launch method
 Ext.define('CustomApp', {
-   // extend app from Rally.app.App
     extend: 'Rally.app.App',
     componentCls: 'app',
-    // A stub is a small program routine that substitutes for a longer program, possibly to be loaded later or that is located remotely.
+    items: [
+        {
+            xtype: 'container',
+            itemId: 'exportButton'
+        }],
+
+ //   ************* My Code *******************
     launch: function() {
-      // The app itself is a container, and calling this.add adds components
-      // to the container.
-      this.add({
-          // The xtype is a shorthand way of specifying what type of component you want to add.
-          xtype: 'rallymilestonecombobox',
-          // An itemId can be used as an alternative way to get a reference to
-          // a component when no object reference is available
-          itemId: 'milestoneComboBox',
-          // The label for the field
-          fieldLabel: 'Filter by MileStone',
-          hideLabel: false,
-          labelSeparator: ':',
-          listeners: {
-              // event listeners executes on select value in dopdown
-              select: this._onSelect,
-              // event listeners excutes on page ready
-              ready: this._onLoad,
-              // this is the scope (this reference) in which the handler function is executed.
-              scope: this
-          },
-          defaultSelectionPosition: '',
-      });
+      this._loadMilestones();
+      exportToExcel = {
+                  xtype: 'rallybutton',
+                  handler: this._callConfluence,
+                  rtl: true,
+                  iconCls: 'icon-export',
+                  toolTip:'Export to Excel',
+                  layout: {
+                      type: 'hbox',
+                      align: 'right'
+                  },
+                  style: {
+                      float: 'right'
+                  },
+                  scope: this
+              };
+              this.down('#exportButton').add(exportToExcel);
+      console.log("Inside 'Launch")
     },
-    _onLoad: function() {
-          this.add({
-              xtype: 'rallygrid',
-              // column configs string to use the default renderer for the type
-              columnCfgs: [
-                  'FormattedID',
-                  'Name',
-                  'Description',
-                  'AffectsDoc'
-              ],
-              // Current application context object (user, workspace, project, scoping, etc.)
-              context: this.getContext(),
-              // add filter params to the store.
-              storeConfig: {
-                  model: 'defect',
-                  filters: this._getMilestoneFilter(),
-              }
-          });
-      },
 
-      _getMilestoneFilter: function() {
-         // send values to filter
-          return [
-            {
-              property: 'Milestones',
-              operator: '=',
-              value: this.down('#milestoneComboBox').getValue()
-          },
+    _callConfluence: function() {
+        var grid = this.down('rallygrid'),
+              store = grid.getStore();
+             console.log("Inside confluence csll");
+             console.log(store);
+             console.log("Inside confluence csll2");
+             console.log(store.data);
+           var  items = store.data.items;
+           var loop = [];
+        for(var i=0; i<items.length; i++) {
+          loop.push({title: items[i].data.Name, description: items[i].data.Description});
+        }
+        var data = JSON.stringify({array: loop});
+        console.log(data);
+      //  this._createConfluencePage();
+    },
+
+    _createConfluencePage : function() {
+      // console.log("inside confluence page");
+      // var url = "https://docops-temp.ca.com/rest/api/content";
+      //
+      // var data = {
+      //             "type":"page",
+      //             "title":"My Test Page",
+      //         "space": {
+      //             "key":"SEOT"
+      //                   },
+      //                   "body": {
+      //                 "storage": {
+      //                       "value":"<p>This is a new page</p>",
+      //                       "representation":"storage"
+      //                 }
+      //         }
+      // };
+
+      // Ext.Ajax.request({
+      //       url:url,
+      //       method: 'POST',
+      //       jsonData: data,
+      //       useDefaultXhrHeader: false,
+      //       withCredentials: true,
+      //        headers : {
+      //            'Authorization': 'Basic U2hhbmtlcjpjaGlydQ==',
+      //             'Content-Type': 'application/json;charset=UTF-8',
+      //        },
+      //       success: function(response) {
+      //             console.log("successful");
+      //       },
+      //       failure: function(response) {
+      //             console.log("failures");
+      //       }
+      // });
+
+//      console.log("outside");
+
+    },
+
+    _loadMilestones: function() {
+      console.log("Inside 'Milestone")
+      this.milestoneComboBox = Ext.create('Rally.ui.combobox.MilestoneComboBox',{
+            fieldLabel: 'Milestone',
+            hideLabel: false,
+            labelAlign: 'right',
+            listeners: {
+                  ready: function(combobox) {
+                        this._loadData();
+                  },
+
+                        select: function(combobox, records) {
+                        this._loadData();
+                  },
+            //    success: this._onStoreBuilt,
+                  scope: this
+            }
+        });
+      this.add(this.milestoneComboBox);
+    },
+
+    //Get data from rally
+    _loadData: function() {
+      console.log("Inside Load")
+      var selectedMilestone = this.milestoneComboBox.getRecord().get('_ref');
+      //console.log("Selected Milestone", selectedMilestone);
+      var defectfilters = [
           {
-            property: 'AffectsDoc',
+            property: 'Milestones',
             operator: '=',
-            value: 'true'
-          }
+            value: selectedMilestone
+            },
+           {
+              property: 'AffectsDoc',
+              operator: '=',
+              value: 'true'
+           }
         ];
-      },
 
-      _onSelect: function() {
-        // The up and down methods are used to traverse the component tree.
-          var grid = this.down('rallygrid'),
-        //
-          store = grid.getStore();
-        //
-          store.clearFilter(true);
-          store.filter(this._getMilestoneFilter());
+      if(this.defectStore){
+            this.defectStore.setFilter(defectfilters);
+            this.defectStore.load();
       }
-    //  AFFECTS DOCUMENTATION
+      else {
+      this.defectStore =  Ext.create('Rally.data.wsapi.Store', {
+      model: 'Defect',
+      autoLoad: true,
+        filters: defectfilters,
+      listeners: {
+              load: function(mystore, mydata, success) {
+              if(!this.myGrid) {
+              this._createGrid(mystore);
+              }
+              },
+                scope:this
+      },
+      fetch: ['FormattedID', 'Name', 'Description', 'AffectsDoc']
+      });
+      console.log("Store Data :",this.defectStore);
+      }
+    },
+
+    //Show the data fetched in a grid
+    _createGrid: function(myDefectStore) {
+      console.log("Inside 'Grid")
+      this.myGrid = Ext.create('Rally.ui.grid.Grid', {
+                  store: myDefectStore,
+                  columnCfgs: [
+                        'FormattedID', 'Name', 'Description', 'AffectsDoc'
+                  ]
+        });
+     console.log('my grid', this.myGrid);
+     this.add(this.myGrid);
+    },
 });
