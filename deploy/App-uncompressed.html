@@ -10,28 +10,43 @@
                 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
-    items: [
-        {
-            xtype: 'container',
-            itemId: 'exportButton'
-        }],
 
  //   ************* My Code *******************
     launch: function() {
       this._loadMilestones();
     },
+
     _callConfluence: function() {
         var grid = this.down('rallygrid'),
               store = grid.getStore();
-           var  items = store.data.var result = [];
+        var  items = store.data.items;
+        var result = "<table>";
+        result += "<thead><th><td>Issue Title</td><td>Issue Description</td></th></thead><tbody>";
         for(var i=0; i<items.length; i++) {
-          result.push({title: items[i].data.Name, description: items[i].data.Description});
+          result += "<tr><td>" + this._html2text(items[i].data.Name) + "</td><td>" + this._html2text(items[i].data.Description) + "</td></tr>";
         }
-        var data = JSON.stringify({array: result});
-        console.log(data);items;
+        result += "</tbody></table>";
+        console.log(result.replace(/\s/g, ' '));
     },
+
     _loadMilestones: function() {
-      console.log("Inside 'Milestone")
+      exportToExcel = {
+                  xtype: 'rallybutton',
+                  handler: this._callConfluence,
+                  rtl: true,
+                  iconCls: 'icon-export',
+                  toolTip:'Export to Excel',
+                  layout: {
+                      type: 'hbox',
+                      align: 'right'
+                  },
+                  style: {
+                      float: 'right'
+                  },
+                  scope: this
+              };
+      this.add(exportToExcel);
+
       this.milestoneComboBox = Ext.create('Rally.ui.combobox.MilestoneComboBox',{
             fieldLabel: 'Milestone',
             hideLabel: false,
@@ -40,7 +55,7 @@
                   ready: function(combobox) {
                         this._loadData();
                   },
-                        select: function(combobox, records) {
+                  select: function(combobox, records) {
                         this._loadData();
                   },
             //    success: this._onStoreBuilt,
@@ -49,11 +64,10 @@
         });
       this.add(this.milestoneComboBox);
     },
+
     //Get data from rally
     _loadData: function() {
-      console.log("Inside Load")
       var selectedMilestone = this.milestoneComboBox.getRecord().get('_ref');
-      //console.log("Selected Milestone", selectedMilestone);
       var defectfilters = [
           {
             property: 'Milestones',
@@ -66,6 +80,7 @@
               value: 'true'
            }
         ];
+
       if(this.defectStore){
             this.defectStore.setFilter(defectfilters);
             this.defectStore.load();
@@ -85,40 +100,24 @@
       },
       fetch: ['FormattedID', 'Name', 'Description', 'AffectsDoc']
       });
-      console.log("Store Data :",this.defectStore);
       }
     },
 
     //Show the data fetched in a grid
     _createGrid: function(myDefectStore) {
-      console.log("Inside 'Grid")
       this.myGrid = Ext.create('Rally.ui.grid.Grid', {
                   store: myDefectStore,
                   columnCfgs: [
                         'FormattedID', 'Name', 'Description', 'AffectsDoc'
                   ]
         });
-     console.log('my grid', this.myGrid);
      this.add(this.myGrid);
-     exportToExcel = {
-                  xtype: 'rallybutton',
-                // handler: this._callConfluence,
-                  rtl: true,
-                  iconCls: 'icon-export',
-                  toolTip:'Export to Excel',
-                  menu: [{text: 'Send to Doc',
-                        handler: this._callConfluence }
-                        ],
-                  layout: {
-                      type: 'hbox',
-                      align: 'right'
-                  },
-                  style: {
-                      float: 'right'
-                  },
-                  scope: this
-              };
-              this.down('#exportButton').add(exportToExcel);
+    },
+    // strip html from string
+    _html2text: function(html) {
+      var tag = document.createElement('div');
+      tag.innerHTML = html;
+      return tag.innerText;
     },
 });
 
